@@ -33,7 +33,10 @@
 #include "ros/console.h"
 #include "nav_msgs/GetMap.h"
 #include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
 #include "geometry_msgs/Quaternion.h"
+#include "geometry_msgs/TransformStamped.h"
 
 using namespace std;
 
@@ -49,6 +52,10 @@ class MapGenerator
       ros::NodeHandle n;
       ROS_INFO("Waiting for the map");
       map_sub_ = n.subscribe("map", 1, &MapGenerator::mapCallback, this);
+
+      n.param("gps_origin_frame", gps_origin_frame_, std::string("gps_origin"));
+      n.param("map_frame", map_frame_, std::string("map"));
+      n.param("save_gps_origin_if_exists", save_gps_origin_if_exists_, true);
     }
 
     void mapCallback(const nav_msgs::OccupancyGridConstPtr& map)
@@ -114,6 +121,36 @@ free_thresh: 0.196
       fprintf(yaml, "image: %s\nresolution: %f\norigin: [%f, %f, %f]\nnegate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.196\n\n",
               mapdatafile.c_str(), map->info.resolution, map->info.origin.position.x, map->info.origin.position.y, yaw);
 
+      if (save_gps_origin_if_exists_)
+      {
+        // Add the transformation between gps_origin and map if it exists
+        tf2_ros::Buffer buffer;
+        tf2_ros::TransformListener tf_l(buffer);
+
+        bool uses_gnss = buffer.canTransform(gps_origin_frame_,
+                                             map_frame_,
+                                             ros::Time(0),
+                                             ros::Duration(5));
+
+        if (uses_gnss)
+        {
+          geometry_msgs::TransformStamped gps_coord = buffer.lookupTransform(gps_origin_frame_,
+                                                                             map_frame_,
+                                                                             ros::Time(0),
+                                                                             ros::Duration(5));
+          fprintf(yaml, "gps_origin:\n  gps_origin_frame: %s\n  map_frame: %s\n  translation:\n    x: %f\n    y: %f\n    z: %f\n  rotation:\n    x: %f\n    y: %f\n    z: %f\n    w: %f\n\n",
+                  gps_origin_frame_.c_str(),
+                  map_frame_.c_str(),
+                  gps_coord.transform.translation.x,
+                  gps_coord.transform.translation.y,
+                  gps_coord.transform.translation.z,
+                  gps_coord.transform.rotation.x,
+                  gps_coord.transform.rotation.y,
+                  gps_coord.transform.rotation.z,
+                  gps_coord.transform.rotation.w);
+        }
+      }
+
       fclose(yaml);
 
       ROS_INFO("Done\n");
@@ -121,8 +158,11 @@ free_thresh: 0.196
     }
 
     std::string mapname_;
+    std::string gps_origin_frame_;
+    std::string map_frame_;
     ros::Subscriber map_sub_;
     bool saved_map_;
+    bool save_gps_origin_if_exists_;
 
 };
 

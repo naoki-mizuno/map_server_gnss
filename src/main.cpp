@@ -45,6 +45,7 @@
 #include "map_server/image_loader.h"
 #include "nav_msgs/MapMetaData.h"
 #include "yaml-cpp/yaml.h"
+#include "tf2_ros/static_transform_broadcaster.h"
 
 #ifdef HAVE_YAMLCPP_GT_0_5_0
 // The >> operator disappeared in yaml-cpp 0.5, so this function is
@@ -110,6 +111,23 @@ class MapServer
         } catch (YAML::InvalidScalar) {
           ROS_ERROR("The map does not contain a free_thresh tag or it is invalid.");
           exit(-1);
+        }
+        try {
+          // Read in and broadcast the transformation between gps_origin -> map if available
+          geometry_msgs::TransformStamped tf;
+          tf.header.stamp = ros::Time::now();
+          doc["gps_origin"]["gps_origin_frame"] >> tf.header.frame_id;
+          tf.child_frame_id = frame_id;
+          doc["gps_origin"]["translation"]["x"] >> tf.transform.translation.x;
+          doc["gps_origin"]["translation"]["y"] >> tf.transform.translation.y;
+          doc["gps_origin"]["translation"]["z"] >> tf.transform.translation.z;
+          doc["gps_origin"]["rotation"]["x"] >> tf.transform.rotation.x;
+          doc["gps_origin"]["rotation"]["y"] >> tf.transform.rotation.y;
+          doc["gps_origin"]["rotation"]["z"] >> tf.transform.rotation.z;
+          doc["gps_origin"]["rotation"]["w"] >> tf.transform.rotation.w;
+          tf_sb.sendTransform(tf);
+        } catch (YAML::InvalidScalar) {
+          // No worries, we'll simply not broadcast and move on
         }
         try {
           std::string modeS = "";
@@ -201,6 +219,7 @@ class MapServer
     ros::Publisher metadata_pub;
     ros::ServiceServer service;
     bool deprecated;
+    tf2_ros::StaticTransformBroadcaster tf_sb;
 
     /** Callback invoked when someone requests our service */
     bool mapCallback(nav_msgs::GetMap::Request  &req,

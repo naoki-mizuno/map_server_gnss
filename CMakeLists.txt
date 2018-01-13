@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(map_server)
+project(map_server_gnss)
 
 find_package(catkin REQUIRED
         COMPONENTS
             roscpp
             nav_msgs
             tf2
+            tf2_ros
         )
 
 find_package(Bullet REQUIRED)
@@ -27,6 +28,7 @@ catkin_package(
         roscpp
         nav_msgs
         tf2
+        tf2_ros
 )
 
 include_directories(
