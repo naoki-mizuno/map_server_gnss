@@ -56,6 +56,8 @@ class MapGenerator
       n.param("gps_origin_frame", gps_origin_frame_, std::string("gps_origin"));
       n.param("map_frame", map_frame_, std::string("map"));
       n.param("save_gps_origin_if_exists", save_gps_origin_if_exists_, true);
+      // Defaults to UTM Zone 53N
+      n.param("epsg", epsg_, 32653);
     }
 
     void mapCallback(const nav_msgs::OccupancyGridConstPtr& map)
@@ -138,7 +140,8 @@ free_thresh: 0.196
                                                                              map_frame_,
                                                                              ros::Time(0),
                                                                              ros::Duration(5));
-          fprintf(yaml, "gps_origin:\n  gps_origin_frame: %s\n  map_frame: %s\n  translation:\n    x: %f\n    y: %f\n    z: %f\n  rotation:\n    x: %f\n    y: %f\n    z: %f\n    w: %f\n\n",
+          fprintf(yaml, "gps_origin:\n  epsg: %d\n  gps_origin_frame: %s\n  map_frame: %s\n  translation:\n    x: %f\n    y: %f\n    z: %f\n  rotation:\n    x: %f\n    y: %f\n    z: %f\n    w: %f\n\n",
+                  epsg_,
                   gps_origin_frame_.c_str(),
                   map_frame_.c_str(),
                   gps_coord.transform.translation.x,
@@ -163,6 +166,7 @@ free_thresh: 0.196
     ros::Subscriber map_sub_;
     bool saved_map_;
     bool save_gps_origin_if_exists_;
+    int epsg_;
 
 };
 

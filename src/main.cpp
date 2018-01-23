@@ -40,6 +40,8 @@
 #include <libgen.h>
 #include <fstream>
 
+#include <gdal/ogr_spatialref.h>
+
 #include "ros/ros.h"
 #include "ros/console.h"
 #include "map_server/image_loader.h"
@@ -71,6 +73,7 @@ class MapServer
       std::string frame_id;
       ros::NodeHandle private_nh("~");
       private_nh.param("frame_id", frame_id, std::string("map"));
+      private_nh.param("epsg", epsg_, 32653);
       deprecated = (res != 0);
       if (!deprecated) {
         //mapfname = fname + ".pgm";
@@ -113,6 +116,7 @@ class MapServer
           exit(-1);
         }
         try {
+          ROS_INFO("Publishing GNSS coordinate of map origin");
           // Read in and broadcast the transformation between gps_origin -> map if available
           geometry_msgs::TransformStamped tf;
           tf.header.stamp = ros::Time::now();
@@ -125,6 +129,32 @@ class MapServer
           doc["gps_origin"]["rotation"]["y"] >> tf.transform.rotation.y;
           doc["gps_origin"]["rotation"]["z"] >> tf.transform.rotation.z;
           doc["gps_origin"]["rotation"]["w"] >> tf.transform.rotation.w;
+
+          // Convert to the specified coordinate system
+          int yaml_epsg;
+          doc["gps_origin"]["epsg"] >> yaml_epsg;
+
+          if (yaml_epsg != epsg_) {
+            ROS_INFO_STREAM("Converting map origin from EPSG " << yaml_epsg << " to EPSG " << epsg_);
+            OGRSpatialReference yaml_ref, tgt_ref;
+            yaml_ref.importFromEPSG(yaml_epsg);
+            tgt_ref.importFromEPSG(epsg_);
+            OGRCoordinateTransformation* converter = OGRCreateCoordinateTransformation(&yaml_ref, &tgt_ref);
+
+            // TODO: Orientation is not considered
+            int transform_success = converter->Transform(
+                    1,
+                    &tf.transform.translation.x,
+                    &tf.transform.translation.y,
+                    &tf.transform.translation.z
+            );
+            if (transform_success != 1) {
+              ROS_WARN("GNSS Coordinate transformation failed.");
+              ROS_WARN("Using whatever was written in the map YAML file");
+            }
+            OGRCoordinateTransformation::DestroyCT(converter);
+          }
+
           tf_sb.sendTransform(tf);
         } catch (YAML::InvalidScalar) {
           // No worries, we'll simply not broadcast and move on
@@ -220,6 +250,7 @@ class MapServer
     ros::ServiceServer service;
     bool deprecated;
     tf2_ros::StaticTransformBroadcaster tf_sb;
+    int epsg_;
 
     /** Callback invoked when someone requests our service */
     bool mapCallback(nav_msgs::GetMap::Request  &req,

@@ -18,6 +18,7 @@ pkg_check_modules(YAMLCPP yaml-cpp REQUIRED)
 if(YAMLCPP_VERSION VERSION_GREATER "0.5.0")
     add_definitions(-DHAVE_YAMLCPP_GT_0_5_0)
 endif()
+find_package(GDAL REQUIRED)
 
 catkin_package(
     INCLUDE_DIRS
@@ -38,6 +39,7 @@ include_directories(
     ${SDL_INCLUDE_DIR}
     ${SDL_IMAGE_INCLUDE_DIRS}
     ${YAMLCPP_INCLUDE_DIRS}
+    ${GDAL_INCLUDE_DIRS}
 )
 
 add_library(map_server_image_loader src/image_loader.cpp)
@@ -54,6 +56,7 @@ add_dependencies(map_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTE
 target_link_libraries(map_server
     map_server_image_loader
     ${YAMLCPP_LIBRARIES}
+    ${GDAL_LIBRARIES}
     ${catkin_LIBRARIES}
 )
 
