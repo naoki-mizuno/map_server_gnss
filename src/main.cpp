@@ -73,7 +73,7 @@ class MapServer
       std::string frame_id;
       ros::NodeHandle private_nh("~");
       private_nh.param("frame_id", frame_id, std::string("map"));
-      private_nh.param("epsg", epsg_, 32653);
+      private_nh.param("epsg", epsg_, -1);
       deprecated = (res != 0);
       if (!deprecated) {
         //mapfname = fname + ".pgm";
@@ -134,7 +134,7 @@ class MapServer
           int yaml_epsg;
           doc["gps_origin"]["epsg"] >> yaml_epsg;
 
-          if (yaml_epsg != epsg_) {
+          if (epsg_ != -1 && yaml_epsg != epsg_) {
             ROS_INFO_STREAM("Converting map origin from EPSG " << yaml_epsg << " to EPSG " << epsg_);
             OGRSpatialReference yaml_ref, tgt_ref;
             yaml_ref.importFromEPSG(yaml_epsg);
