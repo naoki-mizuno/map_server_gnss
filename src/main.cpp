@@ -156,8 +156,10 @@ class MapServer
           }
 
           tf_sb.sendTransform(tf);
-        } catch (YAML::InvalidScalar) {
+        } catch (YAML::Exception) {
           // No worries, we'll simply not broadcast and move on
+          ROS_ERROR("The map does not contain a gps_origin tag or it is invalid.");
+          ROS_WARN_STREAM("Not broadcasting transformation to " << frame_id);
         }
         try {
           std::string modeS = "";
