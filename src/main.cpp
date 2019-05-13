@@ -116,19 +116,21 @@ class MapServer
           exit(-1);
         }
         try {
+          const auto gps_origin = doc["gps_origin"];
+
           ROS_INFO("Publishing GNSS coordinate of map origin");
           // Read in and broadcast the transformation between gps_origin -> map if available
           geometry_msgs::TransformStamped tf;
           tf.header.stamp = ros::Time::now();
-          doc["gps_origin"]["gps_origin_frame"] >> tf.header.frame_id;
+          gps_origin["gps_origin_frame"] >> tf.header.frame_id;
           tf.child_frame_id = frame_id;
-          doc["gps_origin"]["translation"]["x"] >> tf.transform.translation.x;
-          doc["gps_origin"]["translation"]["y"] >> tf.transform.translation.y;
-          doc["gps_origin"]["translation"]["z"] >> tf.transform.translation.z;
-          doc["gps_origin"]["rotation"]["x"] >> tf.transform.rotation.x;
-          doc["gps_origin"]["rotation"]["y"] >> tf.transform.rotation.y;
-          doc["gps_origin"]["rotation"]["z"] >> tf.transform.rotation.z;
-          doc["gps_origin"]["rotation"]["w"] >> tf.transform.rotation.w;
+          gps_origin["translation"]["x"] >> tf.transform.translation.x;
+          gps_origin["translation"]["y"] >> tf.transform.translation.y;
+          gps_origin["translation"]["z"] >> tf.transform.translation.z;
+          gps_origin["rotation"]["x"] >> tf.transform.rotation.x;
+          gps_origin["rotation"]["y"] >> tf.transform.rotation.y;
+          gps_origin["rotation"]["z"] >> tf.transform.rotation.z;
+          gps_origin["rotation"]["w"] >> tf.transform.rotation.w;
 
           // Convert to the specified coordinate system
           int yaml_epsg;
